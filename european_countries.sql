@@ -233,12 +233,8 @@ ALTER SEQUENCE political_parties_pid_seq OWNED BY political_parties.pid;
 CREATE TABLE regions (
     rid integer NOT NULL,
     name character varying(100) NOT NULL,
-    territory_sq_km real NOT NULL,
-    population integer NOT NULL,
     economical_leader integer NOT NULL,
-    CONSTRAINT regions_economical_leader_check CHECK ((economical_leader > 0)),
-    CONSTRAINT regions_population_check CHECK ((population > 0)),
-    CONSTRAINT regions_territory_sq_km_check CHECK ((territory_sq_km > (0)::double precision))
+    CONSTRAINT regions_economical_leader_check CHECK ((economical_leader > 0))
 );
 
 
@@ -440,8 +436,8 @@ COPY countries (id, name, capital, population, territory_sq_km, region_id) FROM 
 47	Switzerland	Bern	8061516	41277	4
 48	Turkey	Ankara	79814871	783562	3
 49	Ukraine	Kiev	44281413	603550	2
-50	Vatican City	Vatican City	842	0.439999998	3
-51	United Kingdom	London	63395574	243809	4
+50	United Kingdom	London	63395574	243809	4
+51	Vatican City	Vatican City	842	0.439999998	3
 \.
 
 
@@ -1064,7 +1060,7 @@ COPY political_parties (pid, country_id, name, leader, political_position, year_
 42	42	Serbian Progressive Party	Aleksandar Vucic	centre-right	2008
 43	43	Direction-Social Democracy	Robert Fico	centre-left	1999
 44	44	Positive Slovenia	Zoran Jankovic	centre-left	2011
-45	45	People Party	centre-right	Mariano Rajoy	1989
+45	45	People Party	Mariano Rajoy	centre-right	1989
 46	46	Swedish Social Democratic Party	Stefan Lofven	centre-left	1889
 47	47	Swiss People Party	Albert Rosti	right-wing	1971
 48	48	Justice and Development Party	Recep Tayyip Erdogan	right-wing	2001
@@ -1085,11 +1081,11 @@ SELECT pg_catalog.setval('political_parties_pid_seq', 51, true);
 -- Data for Name: regions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY regions (rid, name, territory_sq_km, population, economical_leader) FROM stdin;
-1	Northern Europe	1433452	34234798	46
-2	Eastern Europe	5727955	292454364	40
-3	Southern Europe	1215682.25	159989432	23
-4	Western Europe	1510596	262608030	18
+COPY regions (rid, name, economical_leader) FROM stdin;
+1	Northern Europe	46
+2	Eastern Europe	40
+3	Southern Europe	23
+4	Western Europe	18
 \.
 
 
