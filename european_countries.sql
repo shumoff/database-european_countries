@@ -46,7 +46,6 @@ CREATE TABLE countries (
     territory_sq_km real NOT NULL,
     region_id integer NOT NULL,
     CONSTRAINT countries_population_check CHECK ((population > 0)),
-    CONSTRAINT countries_region_id_check CHECK ((region_id > 0)),
     CONSTRAINT countries_territory_sq_km_check CHECK ((territory_sq_km > (0)::double precision))
 );
 
@@ -80,9 +79,7 @@ ALTER SEQUENCE countries_id_seq OWNED BY countries.id;
 
 CREATE TABLE country_associations (
     country_id integer NOT NULL,
-    association_id integer NOT NULL,
-    CONSTRAINT country_associations_association_id_check CHECK ((association_id > 0)),
-    CONSTRAINT country_associations_country_id_check CHECK ((country_id > 0))
+    association_id integer NOT NULL
 );
 
 
@@ -94,9 +91,7 @@ ALTER TABLE country_associations OWNER TO postgres;
 
 CREATE TABLE country_languages (
     country_id integer NOT NULL,
-    language_id integer NOT NULL,
-    CONSTRAINT country_languages_country_id_check CHECK ((country_id > 0)),
-    CONSTRAINT country_languages_language_id_check CHECK ((language_id > 0))
+    language_id integer NOT NULL
 );
 
 
@@ -108,9 +103,7 @@ ALTER TABLE country_languages OWNER TO postgres;
 
 CREATE TABLE country_religions (
     country_id integer NOT NULL,
-    religion_id integer NOT NULL,
-    CONSTRAINT country_religions_country_id_check CHECK ((country_id > 0)),
-    CONSTRAINT country_religions_religion_id_check CHECK ((religion_id > 0))
+    religion_id integer NOT NULL
 );
 
 
@@ -198,7 +191,6 @@ CREATE TABLE political_parties (
     leader character varying(100) NOT NULL,
     political_position character varying(100),
     year_of_foundation integer,
-    CONSTRAINT political_parties_country_id_check CHECK ((country_id > 0)),
     CONSTRAINT political_parties_year_of_foundation_check CHECK ((year_of_foundation > 0))
 );
 
@@ -233,8 +225,7 @@ ALTER SEQUENCE political_parties_pid_seq OWNED BY political_parties.pid;
 CREATE TABLE regions (
     rid integer NOT NULL,
     name character varying(100) NOT NULL,
-    economical_leader integer NOT NULL,
-    CONSTRAINT regions_economical_leader_check CHECK ((economical_leader > 0))
+    economical_leader integer NOT NULL
 );
 
 
@@ -305,7 +296,6 @@ CREATE TABLE rulers (
     beginning_of_government integer NOT NULL,
     end_of_government integer,
     CONSTRAINT rulers_beginning_of_government_check CHECK ((beginning_of_government > 0)),
-    CONSTRAINT rulers_country_id_check CHECK ((country_id > 0)),
     CONSTRAINT valid_years_of_government CHECK ((end_of_government > beginning_of_government))
 );
 
