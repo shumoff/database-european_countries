@@ -1,0 +1,46 @@
+---SIMPLE QUERIES---
+SELECT id, name FROM countries WHERE region_id=1;
+/* Shows all countries from the chosen region (Northern Europe) */
+
+SELECT id, name, territory_sq_km FROM countries ORDER BY territory_sq_km DESC;
+/* Shows all European countries sorted by territory */
+
+SELECT id, name, population FROM countries ORDER BY population DESC;
+/* Shows all European countries sorted by population */
+
+SELECT sum(territory) FROM countries WHERE region_id=1;
+/* Shows the chosen region's territory (Northern Europe) */
+
+SELECT sum(population) FROM countries WHERE region_id=1;
+/* Shows the chosen region's population (Northern Europe) */
+
+SELECT * FROM political_parties ORDER BY political_position;
+/* Shows all political parties sorted by political position */
+
+SELECT * FROM political_parties ORDER BY year_of_foundation;
+/* Shows all political parties sorted by year_of_foundation */
+
+---MEDIUM QUERIES---
+SELECT m.aid, m.name AS assosiation,
+count (*) AS amount_of_countries_in_association FROM major_international_associations m JOIN country_associations c ON m.aid=c.association_id
+GROUP BY m.aid ORDER BY amount_of_countries_in_association DESC;
+/* Shows all international associations sorted by amount of participating countries */
+
+SELECT r.rid, r.name, sum(c.territory_sq_km) AS region_territory_sq_km
+FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_territory_sq_km DESC;
+/* Shows all regions sorted by territory */
+
+SELECT r.rid, r.name, sum(c.population) AS region_population
+FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_population DESC;
+/* Shows all regions sorted by population */
+
+SELECT p.pid, p.name, p.leader, c.name AS country 
+FROM political_parties p JOIN rulers r ON r.name=p.leader JOIN countries c ON r.country_id=c.id WHERE r.end_of_government is NULL;
+/* Shows political parties which leaders currently rule their countries */
+
+SELECT p.political_position,
+count (*) AS amount_of_parties_with_such_position 
+FROM political_parties p JOIN political_parties s ON p.pid=s.pid
+GROUP BY p.political_position ORDER BY amount_of_parties_with_such_position DESC;
+/* Shows different political positions sorted by amount of parties-adherents */
+

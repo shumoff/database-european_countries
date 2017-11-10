@@ -1,4 +1,13 @@
 ---SIMPLE QUERIES---
+SELECT region_id, sum(territory_sq_km) AS region_territory_sq_km FROM countries GROUP BY region_id ORDER BY region_territory_sq_km DESC; 
+/* Shows all regions sorted by territory (without name of the region) */
+
+SELECT region_id, sum(population) AS region_population FROM countries GROUP BY region_id ORDER BY region_population DESC;
+/* Shows all regions sorted by population (without name of the region) */
+
+SELECT DISTINCT ON (type) type AS types_of_associations FROM major_international_associations;
+/* Shows the list of types of the international associations */
+
 SELECT id, name FROM countries WHERE region_id=1;
 /* Shows all countries from the chosen region (Northern Europe) */
 
@@ -17,26 +26,31 @@ SELECT sum(population) FROM countries WHERE region_id=1;
 SELECT * FROM political_parties ORDER BY political_position;
 /* Shows all political parties sorted by political position */
 
-SELECT * FROM political_parties ORDER BY year_of_foundation;
-/* Shows all political parties sorted by year_of_foundation */
+SELECT * FROM political_parties WHERE year_of_foundation > 1899 ORDER BY year_of_foundation;
+/* Shows all political parties founded in the 20th century and sorted by year_of_foundation */
 
 ---MEDIUM QUERIES---
+SELECT p.country_id, p.pid, p.name AS party, r.ruler_id, r.name AS ruler
+FROM political_parties p LEFT JOIN rulers r ON p.leader = r.name WHERE r.name is NOT NULL AND r.end_of_government is NULL;
+/* Shows political parties which leaders currently rule their countries (without name of the country) */
+
+SELECT p.country_id, c.name AS country, p.pid, p.name AS party, r.ruler_id, p.leader AS ruler
+FROM political_parties p JOIN rulers r ON r.name=p.leader JOIN countries c ON r.country_id=c.id 
+WHERE r.end_of_government is NULL;
+/* Shows political parties which leaders currently rule their countries (with name of the country) */
+
 SELECT m.aid, m.name AS assosiation,
 count (*) AS amount_of_countries_in_association FROM major_international_associations m JOIN country_associations c ON m.aid=c.association_id
 GROUP BY m.aid ORDER BY amount_of_countries_in_association DESC;
 /* Shows all international associations sorted by amount of participating countries */
 
-SELECT r.rid, r.name, sum(c.territory_sq_km) AS region_territory_sq_km
+SELECT r.rid, r.name AS region, sum(c.territory_sq_km) AS region_territory_sq_km
 FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_territory_sq_km DESC;
-/* Shows all regions sorted by territory */
+/* Shows all regions sorted by territory (with name of the region)*/
 
-SELECT r.rid, r.name, sum(c.population) AS region_population
+SELECT r.rid, r.name AS region, sum(c.population) AS region_population
 FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_population DESC;
-/* Shows all regions sorted by population */
-
-SELECT p.pid, p.name, p.leader, c.name AS country 
-FROM political_parties p JOIN rulers r ON r.name=p.leader JOIN countries c ON r.country_id=c.id WHERE r.end_of_government is NULL;
-/* Shows political parties which leaders currently rule their countries */
+/* Shows all regions sorted by population (with name of the region)*/
 
 SELECT p.political_position,
 count (*) AS amount_of_parties_with_such_position 
