@@ -1,0 +1,250 @@
+SET enable_seqscan TO off; --FOR ALL QUERIES
+
+1)
+BEFORE
+
+EXPLAIN(ANALYZE) SELECT id, name, territory_sq_km FROM countries ORDER BY territory_sq_km DESC;
+
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Sort  (cost=2.96..3.08 rows=51 width=17) (actual time=0.050..0.053 rows=51 loops=1)
+   Sort Key: territory_sq_km DESC
+   Sort Method: quicksort  Memory: 27kB
+   ->  Seq Scan on countries  (cost=0.00..1.51 rows=51 width=17) (actual time=0.016..0.020 rows=51 loops=1)
+ Planning time: 0.138 ms
+ Execution time: 0.073 ms
+(6 rows)
+
+OPTIMIZATION
+
+CREATE INDEX ON countries(territory_sq_km);
+
+EXPLAIN(ANALYZE) SELECT id, name, territory_sq_km FROM countries ORDER BY territory_sq_km DESC;
+
+                                                                      QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan Backward using countries_territory_sq_km_idx on countries  (cost=0.14..12.91 rows=51 width=17) (actual time=0.062..0.073 rows=51 loops=1)
+ Planning time: 0.134 ms
+ Execution time: 0.105 ms
+(3 rows)
+
+/* Cost and actual time have increased, so the use of index is undesirable */
+
+DROP INDEX countries_territory_sq_km_idx;
+
+2)
+BEFORE
+
+EXPLAIN(ANALYZE) SELECT sum(population) FROM countries WHERE region_id=1;
+
+                                                         QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=10000000001.66..10000000001.67 rows=1 width=8) (actual time=0.020..0.021 rows=1 loops=1)
+   ->  Seq Scan on countries  (cost=10000000000.00..10000000001.64 rows=8 width=4) (actual time=0.012..0.016 rows=8 loops=1)
+         Filter: (region_id = 1)
+         Rows Removed by Filter: 43
+ Planning time: 0.323 ms
+ Execution time: 0.041 ms
+(6 rows)
+
+OPTIMIZATION 
+
+CREATE INDEX ON countries(region_id);
+
+EXPLAIN(ANALYZE) SELECT sum(population) FROM countries WHERE region_id=1;
+
+                                                               QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=8.30..8.31 rows=1 width=8) (actual time=0.044..0.045 rows=1 loops=1)
+   ->  Index Scan using countries_region_id_idx on countries  (cost=0.14..8.28 rows=8 width=4) (actual time=0.035..0.038 rows=8 loops=1)
+         Index Cond: (region_id = 1)
+ Planning time: 0.098 ms
+ Execution time: 0.073 ms
+(5 rows)
+
+/* Cost and actual time have increased, so the use of index is undesirable */
+
+DROP INDEX countries_region_id_idx;
+
+3)
+BEFORE
+
+EXPLAIN(ANALYZE) SELECT DISTINCT ON (type) type AS types_of_associations FROM major_international_associations;
+
+                                                                          QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Unique  (cost=10000000013.33..10000000013.73 rows=80 width=218) (actual time=0.081..0.087 rows=8 loops=1)
+   ->  Sort  (cost=10000000013.33..10000000013.53 rows=80 width=218) (actual time=0.080..0.081 rows=14 loops=1)
+         Sort Key: type
+         Sort Method: quicksort  Memory: 25kB
+         ->  Seq Scan on major_international_associations  (cost=10000000000.00..10000000010.80 rows=80 width=218) (actual time=0.027..0.031 rows=14 loops=1)
+ Planning time: 0.150 ms
+ Execution time: 0.122 ms
+(7 rows)
+
+OPTIMIZATION
+
+CREATE INDEX ON major_international_associations(type);
+
+                                                                                         QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Unique  (cost=0.14..12.38 rows=14 width=218) (actual time=0.185..0.196 rows=8 loops=1)
+   ->  Index Only Scan using major_international_associations_type_idx on major_international_associations  (cost=0.14..12.35 rows=14 width=218) (actual time=0.183..0.187 rows=14 loops=1)
+         Heap Fetches: 14
+ Planning time: 0.955 ms
+ Execution time: 0.233 ms
+(5 rows)
+
+/* Cost and actual time have increased, so the use of index is undesirable */ 
+
+DROP INDEX major_international_associations_type_idx;
+
+4)
+BEFORE
+
+EXPLAIN(ANALYZE) SELECT * FROM political_parties WHERE year_of_foundation > 1899 ORDER BY year_of_foundation;
+
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10000000002.87..10000000002.99 rows=45 width=59) (actual time=0.179..0.182 rows=45 loops=1)
+   Sort Key: year_of_foundation
+   Sort Method: quicksort  Memory: 31kB
+   ->  Seq Scan on political_parties  (cost=10000000000.00..10000000001.64 rows=45 width=59) (actual time=0.144..0.152 rows=45 loops=1)
+         Filter: (year_of_foundation > 1899)
+         Rows Removed by Filter: 6
+ Planning time: 0.167 ms
+ Execution time: 0.219 ms
+(8 rows)
+
+CREATE INDEX ON political_parties(year_of_foundation);
+
+                                                                           QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using political_parties_year_of_foundation_idx on political_parties  (cost=0.14..12.93 rows=45 width=59) (actual time=0.018..0.025 rows=45 loops=1)
+   Index Cond: (year_of_foundation > 1899)
+ Planning time: 0.626 ms
+ Execution time: 0.044 ms
+(4 rows)
+
+/* We examine both operations (they work with the same index): cost and time have reduced so the index is useful */
+
+5)
+BEFORE
+
+EXPLAIN(ANALYZE) SELECT p.country_id, c.name AS country, p.pid, p.name AS party, r.ruler_id, p.leader AS ruler
+FROM political_parties p JOIN rulers r ON r.name=p.leader JOIN countries c ON r.country_id=c.id 
+WHERE r.end_of_government is NULL;
+
+                                                                             QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=13.82..66.82 rows=51 width=57) (actual time=0.093..0.345 rows=21 loops=1)
+   Hash Cond: (r.country_id = c.id)
+   ->  Nested Loop  (cost=0.28..52.57 rows=51 width=52) (actual time=0.045..0.285 rows=21 loops=1)
+         ->  Index Scan using rulers_name_beginning_of_government_key on rulers r  (cost=0.14..12.91 rows=51 width=22) (actual time=0.008..0.029 rows=51 loops=1)
+               Filter: (end_of_government IS NULL)
+         ->  Index Scan using political_parties_name_leader_key on political_parties p  (cost=0.14..0.77 rows=1 width=44) (actual time=0.004..0.004 rows=0 loops=51)
+               Index Cond: ((leader)::text = (r.name)::text)
+   ->  Hash  (cost=12.91..12.91 rows=51 width=13) (actual time=0.033..0.033 rows=51 loops=1)
+         Buckets: 1024  Batches: 1  Memory Usage: 11kB
+         ->  Index Scan using countries_pkey on countries c  (cost=0.14..12.91 rows=51 width=13) (actual time=0.004..0.024 rows=51 loops=1)
+ Planning time: 0.812 ms
+ Execution time: 0.436 ms
+(12 rows)
+
+CREATE INDEX ON rulers(name text_pattern_ops);
+CREATE INDEX ON countries(id); 
+CREATE INDEX ON rulers(country_id);
+CREATE INDEX ON political_parties(leader text_pattern_ops);
+
+                                                                            QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=13.82..40.82 rows=51 width=57) (actual time=0.075..0.112 rows=21 loops=1)
+   Hash Cond: (r.country_id = c.id)
+   ->  Merge Join  (cost=0.28..26.58 rows=51 width=52) (actual time=0.038..0.070 rows=21 loops=1)
+         Merge Cond: ((p.leader)::text = (r.name)::text)
+         ->  Index Scan using political_parties_leader_idx on political_parties p  (cost=0.14..12.91 rows=51 width=44) (actual time=0.013..0.021 rows=51 loops=1)
+         ->  Index Scan using rulers_name_idx on rulers r  (cost=0.14..12.91 rows=51 width=22) (actual time=0.016..0.025 rows=51 loops=1)
+               Filter: (end_of_government IS NULL)
+   ->  Hash  (cost=12.91..12.91 rows=51 width=13) (actual time=0.023..0.023 rows=51 loops=1)
+         Buckets: 1024  Batches: 1  Memory Usage: 11kB
+         ->  Index Scan using countries_id_idx on countries c  (cost=0.14..12.91 rows=51 width=13) (actual time=0.002..0.012 rows=51 loops=1)
+ Planning time: 12.601 ms
+ Execution time: 0.145 ms
+(12 rows)
+
+/* Uneffective */
+
+6)
+BEFORE
+
+EXPLAIN(ANALYZE)SELECT r.rid, r.name AS region, sum(c.territory_sq_km) AS region_territory_sq_km
+FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_territory_sq_km DESC;
+
+                                                                    QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10000000017.22..10000000017.23 rows=4 width=226) (actual time=0.082..0.083 rows=4 loops=1)
+   Sort Key: (sum(c.territory_sq_km)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   ->  GroupAggregate  (cost=10000000000.13..10000000017.18 rows=4 width=226) (actual time=0.044..0.073 rows=4 loops=1)
+         Group Key: r.rid
+         ->  Nested Loop  (cost=10000000000.13..10000000016.89 rows=51 width=226) (actual time=0.025..0.060 rows=51 loops=1)
+               Join Filter: (c.region_id = r.rid)
+               Rows Removed by Join Filter: 153
+               ->  Index Scan using regions_pkey on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.005..0.006 rows=4 loops=1)
+               ->  Materialize  (cost=10000000000.00..10000000001.76 rows=51 width=8) (actual time=0.003..0.008 rows=51 loops=4)
+                     ->  Seq Scan on countries c  (cost=10000000000.00..10000000001.51 rows=51 width=8) (actual time=0.010..0.018 rows=51 loops=1)
+ Planning time: 0.779 ms
+ Execution time: 0.122 ms
+(13 rows)
+
+CREATE INDEX ON regions(rid);
+CREATE INDEX ON countries(region_id);
+
+                                                                        QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=26.08..26.09 rows=4 width=226) (actual time=0.090..0.091 rows=4 loops=1)
+   Sort Key: (sum(c.territory_sq_km)) DESC
+   Sort Method: quicksort  Memory: 25kB
+   ->  GroupAggregate  (cost=0.27..26.04 rows=4 width=226) (actual time=0.053..0.080 rows=4 loops=1)
+         Group Key: r.rid
+         ->  Merge Join  (cost=0.27..25.74 rows=51 width=226) (actual time=0.041..0.067 rows=51 loops=1)
+               Merge Cond: (r.rid = c.region_id)
+               ->  Index Scan using regions_rid_idx on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.026..0.027 rows=4 loops=1)
+               ->  Index Scan using countries_region_id_idx on countries c  (cost=0.14..12.91 rows=51 width=8) (actual time=0.012..0.024 rows=51 loops=1)
+ Planning time: 1.462 ms
+ Execution time: 0.138 ms
+(11 rows)
+
+/* Uneffective */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

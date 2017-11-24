@@ -1,0 +1,71 @@
+---COMPLEX QUERIES---
+The following queries have logically grounded way of location (from global structures to local ones). Please choose the last ones (1.3, 2.1, 3.2) as the ones to be counted.
+
+1.1
+SELECT c1.id, c1.name AS country, c1.territory_sq_km,
+c1.population, 
+round(
+	(SELECT (c1.population)
+	AS foo) / 
+	(SELECT (c1.territory_sq_km)
+	AS foo)) 
+AS population_density FROM 
+	countries c1 JOIN countries c2 ON (c1.id=c2.id AND c1.region_id = 1)
+GROUP BY c1.id ORDER BY population_density DESC;
+/* Shows all countries in Europe sorted by population density */
+
+1.2
+SELECT r.rid, r.name AS region, sum(c.territory_sq_km) AS region_territory_sq_km,
+sum(c.population) AS region_population, 
+round(
+	(SELECT AVG(region_population) FROM 
+		(SELECT sum(c.population) AS region_population) 
+	AS foo) / 
+	(SELECT AVG(region_territory_sq_km) FROM 
+		(SELECT sum(c.territory_sq_km) AS region_territory_sq_km) 
+	AS foo)) 
+AS region_population_density FROM 
+	countries c JOIN regions r ON c.region_id=r.rid 
+	GROUP BY r.rid ORDER BY region_population_density DESC;
+/* Shows all regions sorted by population density */
+
+1.3
+SELECT c1.id, c1.name AS country, c1.territory_sq_km,
+c1.population, 
+round(
+	(SELECT (c1.population)
+	AS foo) / 
+	(SELECT (c1.territory_sq_km)
+	AS foo)) 
+AS population_density FROM 
+	countries c1 JOIN countries c2 ON (c1.id=c2.id AND c1.region_id = 1)
+GROUP BY c1.id ORDER BY population_density DESC;
+/* Shows all countries in the chosen region (Northern Europe) sorted by population density */
+	
+
+2.1	
+SELECT c.name AS country, count(p.pid) AS number_of_parties FROM
+	countries c LEFT JOIN political_parties p ON (c.id = p.country_id AND p.political_position = 'centre-right')
+GROUP BY c.name ORDER BY number_of_parties DESC;
+/* Shows all countries sorted by the amount of parties with the chosen political position (centre-right) */
+
+
+3.1
+SELECT l.name AS the_most_presented_language, count(*) AS amount_of_countries FROM
+	languages l JOIN country_languages cl ON (l.lid = cl.language_id) GROUP BY l.lid
+		HAVING count(*) = (SELECT MAX(amount_of_countries) FROM (SELECT count(*) AS amount_of_countries 
+		FROM languages l JOIN country_languages cl ON (l.lid = cl.language_id) GROUP BY l.lid) AS t)
+ORDER BY l.lid;
+/* Shows the most presented language (by number of countries) in Europe */
+
+3.2
+WITH t1 AS (SELECT l.lid, l.name FROM 
+	languages l JOIN country_languages cl ON (l.lid = cl.language_id) JOIN 
+	countries c ON (c.region_id = 4 AND cl.country_id = c.id))
+SELECT t1.name AS the_most_presented_language, count(*) AS amount_of_countries FROM 
+t1 GROUP BY t1.name
+	HAVING count(*) = (SELECT MAX(amount_of_countries) FROM 
+		(SELECT count(*) AS amount_of_countries FROM t1 GROUP BY t1.name) AS t2)
+ORDER BY t1.name;
+/* Shows the most presented language (by number of countries) in the chosen region (Western Europe) */
+
