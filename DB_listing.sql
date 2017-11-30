@@ -1,8 +1,7 @@
+﻿DROP DATABASE IF EXISTS european_countries;
 CREATE DATABASE european_countries;
 GRANT ALL PRIVILEGES ON DATABASE european_countries TO postgres;
 \connect european_countries
-
-
 
 CREATE TABLE countries (
 id serial primary key,
