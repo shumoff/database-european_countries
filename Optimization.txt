@@ -135,41 +135,43 @@ EXPLAIN(ANALYZE) SELECT p.country_id, c.name AS country, p.pid, p.name AS party,
 FROM political_parties p JOIN rulers r ON r.name=p.leader JOIN countries c ON r.country_id=c.id 
 WHERE r.end_of_government is NULL;
 
-                                                                             QUERY PLAN
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Hash Join  (cost=13.82..66.82 rows=51 width=57) (actual time=0.093..0.345 rows=21 loops=1)
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=4.29..7.21 rows=51 width=57) (actual time=0.173..0.195 rows=21 loops=1)
    Hash Cond: (r.country_id = c.id)
-   ->  Nested Loop  (cost=0.28..52.57 rows=51 width=52) (actual time=0.045..0.285 rows=21 loops=1)
-         ->  Index Scan using rulers_name_beginning_of_government_key on rulers r  (cost=0.14..12.91 rows=51 width=22) (actual time=0.008..0.029 rows=51 loops=1)
-               Filter: (end_of_government IS NULL)
-         ->  Index Scan using political_parties_name_leader_key on political_parties p  (cost=0.14..0.77 rows=1 width=44) (actual time=0.004..0.004 rows=0 loops=51)
-               Index Cond: ((leader)::text = (r.name)::text)
-   ->  Hash  (cost=12.91..12.91 rows=51 width=13) (actual time=0.033..0.033 rows=51 loops=1)
+   ->  Hash Join  (cost=2.15..4.36 rows=51 width=52) (actual time=0.061..0.078 rows=21 loops=1)
+         Hash Cond: ((p.leader)::text = (r.name)::text)
+         ->  Seq Scan on political_parties p  (cost=0.00..1.51 rows=51 width=44) (actual time=0.010..0.013 rows=51 loops=1)
+         ->  Hash  (cost=1.51..1.51 rows=51 width=22) (actual time=0.030..0.030 rows=51 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 11kB
+               ->  Seq Scan on rulers r  (cost=0.00..1.51 rows=51 width=22) (actual time=0.007..0.015 rows=51 loops=1)
+                     Filter: (end_of_government IS NULL)
+   ->  Hash  (cost=1.51..1.51 rows=51 width=13) (actual time=0.084..0.084 rows=51 loops=1)
          Buckets: 1024  Batches: 1  Memory Usage: 11kB
-         ->  Index Scan using countries_pkey on countries c  (cost=0.14..12.91 rows=51 width=13) (actual time=0.004..0.024 rows=51 loops=1)
- Planning time: 0.812 ms
- Execution time: 0.436 ms
-(12 rows)
+         ->  Seq Scan on countries c  (cost=0.00..1.51 rows=51 width=13) (actual time=0.055..0.062 rows=51 loops=1)
+ Planning time: 0.653 ms
+ Execution time: 0.236 ms
+(14 rows)
 
 CREATE INDEX ON rulers(name text_pattern_ops);
-CREATE INDEX ON countries(id); 
 CREATE INDEX ON rulers(country_id);
 CREATE INDEX ON political_parties(leader text_pattern_ops);
+CREATE INDEX ON rulers(end_of_government) WHERE(end_of_government is NULL);
 
                                                                             QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Hash Join  (cost=13.82..40.82 rows=51 width=57) (actual time=0.075..0.112 rows=21 loops=1)
+ Hash Join  (cost=13.82..40.82 rows=51 width=57) (actual time=0.095..0.140 rows=21 loops=1)
    Hash Cond: (r.country_id = c.id)
-   ->  Merge Join  (cost=0.28..26.58 rows=51 width=52) (actual time=0.038..0.070 rows=21 loops=1)
+   ->  Merge Join  (cost=0.28..26.58 rows=51 width=52) (actual time=0.060..0.097 rows=21 loops=1)
          Merge Cond: ((p.leader)::text = (r.name)::text)
-         ->  Index Scan using political_parties_leader_idx on political_parties p  (cost=0.14..12.91 rows=51 width=44) (actual time=0.013..0.021 rows=51 loops=1)
-         ->  Index Scan using rulers_name_idx on rulers r  (cost=0.14..12.91 rows=51 width=22) (actual time=0.016..0.025 rows=51 loops=1)
+         ->  Index Scan using political_parties_leader_idx on political_parties p  (cost=0.14..12.91 rows=51 width=44) (actual time=0.035..0.044 rows=51 loops=1)
+         ->  Index Scan using rulers_name_idx on rulers r  (cost=0.14..12.91 rows=51 width=22) (actual time=0.016..0.026 rows=51 loops=1)
                Filter: (end_of_government IS NULL)
    ->  Hash  (cost=12.91..12.91 rows=51 width=13) (actual time=0.023..0.023 rows=51 loops=1)
          Buckets: 1024  Batches: 1  Memory Usage: 11kB
-         ->  Index Scan using countries_id_idx on countries c  (cost=0.14..12.91 rows=51 width=13) (actual time=0.002..0.012 rows=51 loops=1)
- Planning time: 12.601 ms
- Execution time: 0.145 ms
+         ->  Index Scan using countries_pkey on countries c  (cost=0.14..12.91 rows=51 width=13) (actual time=0.002..0.011 rows=51 loops=1)
+ Planning time: 0.454 ms
+ Execution time: 0.187 ms
 (12 rows)
 
 /* Uneffective */
@@ -177,45 +179,94 @@ CREATE INDEX ON political_parties(leader text_pattern_ops);
 6)
 BEFORE
 
+EXPLAIN(ANALYZE)SELECT m.aid, m.name AS assosiation,
+count (*) AS amount_of_countries_in_association FROM major_international_associations m JOIN country_associations c ON m.aid=c.association_id
+GROUP BY m.aid ORDER BY amount_of_countries_in_association DESC;
+/*SET enable_seqscan TO on */
+
+                                                                       QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=10.74..10.77 rows=14 width=230) (actual time=0.205..0.207 rows=14 loops=1)
+   Sort Key: (count(*)) DESC
+   Sort Method: quicksort  Memory: 26kB
+   ->  HashAggregate  (cost=10.33..10.47 rows=14 width=230) (actual time=0.188..0.190 rows=14 loops=1)
+         Group Key: m.aid
+         ->  Hash Join  (cost=1.32..9.11 rows=244 width=222) (actual time=0.053..0.140 rows=244 loops=1)
+               Hash Cond: (c.association_id = m.aid)
+               ->  Seq Scan on country_associations c  (cost=0.00..4.44 rows=244 width=4) (actual time=0.029..0.054 rows=244 loops=1)
+               ->  Hash  (cost=1.14..1.14 rows=14 width=222) (actual time=0.017..0.017 rows=14 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                     ->  Seq Scan on major_international_associations m  (cost=0.00..1.14 rows=14 width=222) (actual time=0.007..0.008 rows=14 loops=1)
+ Planning time: 0.279 ms
+ Execution time: 0.262 ms
+(13 rows)
+
+/* INDEXES major_international_associations_pkey and country_associations_pkey already exist, let's just SET enable_seqscan TO off */
+
+                                                                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=31.37..31.40 rows=14 width=230) (actual time=0.204..0.206 rows=14 loops=1)
+   Sort Key: (count(*)) DESC
+   Sort Method: quicksort  Memory: 26kB
+   ->  HashAggregate  (cost=30.96..31.10 rows=14 width=230) (actual time=0.187..0.189 rows=14 loops=1)
+         Group Key: m.aid
+         ->  Hash Join  (cost=21.95..29.74 rows=244 width=222) (actual time=0.056..0.136 rows=244 loops=1)
+               Hash Cond: (c.association_id = m.aid)
+               ->  Bitmap Heap Scan on country_associations c  (cost=9.43..13.87 rows=244 width=4) (actual time=0.035..0.052 rows=244 loops=1)
+                     Heap Blocks: exact=2
+                     ->  Bitmap Index Scan on country_associations_pkey  (cost=0.00..9.37 rows=244 width=0) (actual time=0.020..0.020 rows=244 loops=1)
+               ->  Hash  (cost=12.35..12.35 rows=14 width=222) (actual time=0.015..0.015 rows=14 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                     ->  Index Scan using major_international_associations_pkey on major_international_associations m  (cost=0.14..12.35 rows=14 width=222) (actual time=0.006..0.010 rows=14 loops=1)
+ Planning time: 0.256 ms
+ Execution time: 0.274 ms
+(15 rows)
+
+/* Uneffective */
+
+7)
+BEFORE
+
 EXPLAIN(ANALYZE)SELECT r.rid, r.name AS region, sum(c.territory_sq_km) AS region_territory_sq_km
 FROM countries c JOIN regions r ON c.region_id=r.rid GROUP BY r.rid ORDER BY region_territory_sq_km DESC;
 
                                                                     QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------------------------
- Sort  (cost=10000000017.22..10000000017.23 rows=4 width=226) (actual time=0.082..0.083 rows=4 loops=1)
+ Sort  (cost=10000000017.22..10000000017.23 rows=4 width=226) (actual time=0.150..0.151 rows=4 loops=1)
    Sort Key: (sum(c.territory_sq_km)) DESC
    Sort Method: quicksort  Memory: 25kB
-   ->  GroupAggregate  (cost=10000000000.13..10000000017.18 rows=4 width=226) (actual time=0.044..0.073 rows=4 loops=1)
+   ->  GroupAggregate  (cost=10000000000.13..10000000017.18 rows=4 width=226) (actual time=0.077..0.121 rows=4 loops=1)
          Group Key: r.rid
-         ->  Nested Loop  (cost=10000000000.13..10000000016.89 rows=51 width=226) (actual time=0.025..0.060 rows=51 loops=1)
+         ->  Nested Loop  (cost=10000000000.13..10000000016.89 rows=51 width=226) (actual time=0.046..0.102 rows=51 loops=1)
                Join Filter: (c.region_id = r.rid)
                Rows Removed by Join Filter: 153
-               ->  Index Scan using regions_pkey on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.005..0.006 rows=4 loops=1)
-               ->  Materialize  (cost=10000000000.00..10000000001.76 rows=51 width=8) (actual time=0.003..0.008 rows=51 loops=4)
-                     ->  Seq Scan on countries c  (cost=10000000000.00..10000000001.51 rows=51 width=8) (actual time=0.010..0.018 rows=51 loops=1)
- Planning time: 0.779 ms
- Execution time: 0.122 ms
+               ->  Index Scan using regions_pkey on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.012..0.015 rows=4 loops=1)
+               ->  Materialize  (cost=10000000000.00..10000000001.76 rows=51 width=8) (actual time=0.006..0.012 rows=51 loops=4)
+                     ->  Seq Scan on countries c  (cost=10000000000.00..10000000001.51 rows=51 width=8) (actual time=0.018..0.024 rows=51 loops=1)
+ Planning time: 0.276 ms
+ Execution time: 0.215 ms
 (13 rows)
 
-CREATE INDEX ON regions(rid);
 CREATE INDEX ON countries(region_id);
 
                                                                         QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
- Sort  (cost=26.08..26.09 rows=4 width=226) (actual time=0.090..0.091 rows=4 loops=1)
+ Sort  (cost=26.08..26.09 rows=4 width=226) (actual time=0.105..0.106 rows=4 loops=1)
    Sort Key: (sum(c.territory_sq_km)) DESC
    Sort Method: quicksort  Memory: 25kB
-   ->  GroupAggregate  (cost=0.27..26.04 rows=4 width=226) (actual time=0.053..0.080 rows=4 loops=1)
+   ->  GroupAggregate  (cost=0.27..26.04 rows=4 width=226) (actual time=0.041..0.074 rows=4 loops=1)
          Group Key: r.rid
-         ->  Merge Join  (cost=0.27..25.74 rows=51 width=226) (actual time=0.041..0.067 rows=51 loops=1)
+         ->  Merge Join  (cost=0.27..25.74 rows=51 width=226) (actual time=0.025..0.057 rows=51 loops=1)
                Merge Cond: (r.rid = c.region_id)
-               ->  Index Scan using regions_rid_idx on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.026..0.027 rows=4 loops=1)
-               ->  Index Scan using countries_region_id_idx on countries c  (cost=0.14..12.91 rows=51 width=8) (actual time=0.012..0.024 rows=51 loops=1)
- Planning time: 1.462 ms
- Execution time: 0.138 ms
+               ->  Index Scan using regions_pkey on regions r  (cost=0.13..12.19 rows=4 width=222) (actual time=0.015..0.016 rows=4 loops=1)
+               ->  Index Scan using countries_region_id_idx on countries c  (cost=0.14..12.91 rows=51 width=8) (actual time=0.006..0.021 rows=51 loops=1)
+ Planning time: 0.351 ms
+ Execution time: 0.212 ms
 (11 rows)
 
 /* Uneffective */
+
+
 
 
 
