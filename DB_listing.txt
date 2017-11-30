@@ -357,9 +357,7 @@ ADD UNIQUE (capital),
 ADD UNIQUE (name),
 ADD FOREIGN KEY (region_id) REFERENCES regions (rid),
 ADD CHECK (population > 0),
-ADD CHECK (territory_sq_km > 0);
-
-ALTER TABLE countries
+ADD CHECK (territory_sq_km > 0),
 ALTER COLUMN name SET NOT NULL,
 ALTER COLUMN capital SET NOT NULL,
 ALTER COLUMN population SET NOT NULL,
