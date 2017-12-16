@@ -18,10 +18,10 @@ GROUP BY c1.id ORDER BY population_density DESC;
 SELECT r.rid, r.name AS region, sum(c.territory_sq_km) AS region_territory_sq_km,
 sum(c.population) AS region_population, 
 round(
-	(SELECT AVG(region_population) FROM 
+	(SELECT (region_population) FROM 
 		(SELECT sum(c.population) AS region_population) 
 	AS foo) / 
-	(SELECT AVG(region_territory_sq_km) FROM 
+	(SELECT (region_territory_sq_km) FROM 
 		(SELECT sum(c.territory_sq_km) AS region_territory_sq_km) 
 	AS foo)) 
 AS region_population_density FROM 

@@ -156,7 +156,7 @@ WHERE r.end_of_government is NULL;
 CREATE INDEX ON rulers(name text_pattern_ops);
 CREATE INDEX ON rulers(country_id);
 CREATE INDEX ON political_parties(leader text_pattern_ops);
-CREATE INDEX ON rulers(end_of_government) WHERE(end_of_government is NULL);
+CREATE INDEX ON rulers(end_of_government);
 
                                                                             QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
